@@ -29,7 +29,15 @@ function getFirstValue(row, aliases, fallback = '-') {
 }
 
 function normalizeSmsCode(code) {
-  return String(code ?? '').replace(/\s+/g, '');
+  return String(code ?? '').replace(/[\s-]+/g, '');
+}
+
+function getSmsTextValue(text) {
+  const value = String(text ?? '').trim();
+  if (!value) return '';
+
+  const codeMatch = value.match(/(?:^|[^\d])(\d(?:[\s-]?\d){3,7})(?!\d)/);
+  return codeMatch ? normalizeSmsCode(codeMatch[1]) : value;
 }
 
 function App() {
@@ -382,7 +390,7 @@ function App() {
             if (smsCheck?.status === 1) updateStatus('Number is ready. Waiting for SMS...', 'loading');
             if (smsCheck?.sms) {
               clearPolling();
-              setSmsCode(normalizeSmsCode(smsCheck.sms));
+              setSmsCode(getSmsTextValue(smsCheck.sms));
               setCurrentOrderId(null);
               updateStatus('SMS received!', 'success');
               setOrdering(false);
@@ -402,7 +410,7 @@ function App() {
             const data = await checkOrder(FIVESIM_PROXY_URL, key, order.id);
             if (data.sms?.length) {
               clearPolling();
-              setSmsCode(normalizeSmsCode(data.sms[0].code || data.sms[0].text));
+              setSmsCode(data.sms[0].code ? normalizeSmsCode(data.sms[0].code) : getSmsTextValue(data.sms[0].text));
               setCurrentOrderId(null);
               updateStatus('SMS received!', 'success');
               setOrdering(false);
@@ -496,7 +504,7 @@ function App() {
                   const smsCheck = await checkSMS(key, orderCode);
                   if (smsCheck?.sms) {
                     clearPolling();
-                    setSmsCode(normalizeSmsCode(smsCheck.sms));
+                    setSmsCode(getSmsTextValue(smsCheck.sms));
                     setCurrentOrderId(null);
                     updateStatus('SMS resent successfully!', 'success');
                   }
@@ -672,7 +680,7 @@ function App() {
         </div>
       </section>
 
-      <section className="quick-grid">
+      <section className="quick-grid tool-grid">
         <button onClick={() => pickRandom('Caption')}>🖊 Pick Caption</button>
         <button onClick={pickTodayPost}>📅 Pick Post</button>
         <button onClick={() => pickRandom('Reply')}>💬 Pick Reply</button>
@@ -762,7 +770,7 @@ function App() {
                 <h3>OTP/CODE</h3>
                 <p>{smsCode}</p>
                 <div className="quick-grid two">
-                  <button onClick={() => copyValue('Code', normalizeSmsCode(smsCode))}>Copy</button>
+                  <button onClick={() => copyValue('Code', smsCode)}>Copy</button>
                   <button onClick={resetSMS}>Reset</button>
                 </div>
               </div>
