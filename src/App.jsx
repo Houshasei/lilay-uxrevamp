@@ -28,6 +28,10 @@ function getFirstValue(row, aliases, fallback = '-') {
   return fallback;
 }
 
+function normalizeSmsCode(code) {
+  return String(code ?? '').replace(/\s+/g, '');
+}
+
 function App() {
   const [currentUser, setCurrentUser] = useState(() => getStoredValue('currentUser', 'Ces'));
   const [currentPlatform, setCurrentPlatform] = useState(() => getStoredValue('currentPlatform', 'Instagram'));
@@ -378,7 +382,7 @@ function App() {
             if (smsCheck?.status === 1) updateStatus('Number is ready. Waiting for SMS...', 'loading');
             if (smsCheck?.sms) {
               clearPolling();
-              setSmsCode(smsCheck.sms);
+              setSmsCode(normalizeSmsCode(smsCheck.sms));
               setCurrentOrderId(null);
               updateStatus('SMS received!', 'success');
               setOrdering(false);
@@ -398,7 +402,7 @@ function App() {
             const data = await checkOrder(FIVESIM_PROXY_URL, key, order.id);
             if (data.sms?.length) {
               clearPolling();
-              setSmsCode(data.sms[0].code || data.sms[0].text);
+              setSmsCode(normalizeSmsCode(data.sms[0].code || data.sms[0].text));
               setCurrentOrderId(null);
               updateStatus('SMS received!', 'success');
               setOrdering(false);
@@ -492,7 +496,7 @@ function App() {
                   const smsCheck = await checkSMS(key, orderCode);
                   if (smsCheck?.sms) {
                     clearPolling();
-                    setSmsCode(smsCheck.sms);
+                    setSmsCode(normalizeSmsCode(smsCheck.sms));
                     setCurrentOrderId(null);
                     updateStatus('SMS resent successfully!', 'success');
                   }
@@ -758,7 +762,7 @@ function App() {
                 <h3>OTP/CODE</h3>
                 <p>{smsCode}</p>
                 <div className="quick-grid two">
-                  <button onClick={() => copyValue('Code', smsCode)}>Copy</button>
+                  <button onClick={() => copyValue('Code', normalizeSmsCode(smsCode))}>Copy</button>
                   <button onClick={resetSMS}>Reset</button>
                 </div>
               </div>
