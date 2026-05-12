@@ -1,8 +1,8 @@
 :root {
   color-scheme: dark;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #06111f;
-  color: #edf7ff;
+  background: #140b12;
+  color: #fff3e6;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -15,16 +15,17 @@
 
 html {
   min-height: 100%;
-  background: #06111f;
+  background: #140b12;
 }
 
 body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at 10% -10%, rgba(0, 194, 255, 0.28), transparent 38%),
-    radial-gradient(circle at 95% 5%, rgba(66, 133, 244, 0.3), transparent 30%),
-    linear-gradient(145deg, #020712 0%, #06111f 46%, #0b2545 100%);
+    radial-gradient(circle at 10% -10%, rgba(255, 177, 66, 0.2), transparent 38%),
+    radial-gradient(circle at 95% 5%, rgba(255, 88, 134, 0.18), transparent 30%),
+    radial-gradient(circle at 50% 105%, rgba(138, 92, 246, 0.14), transparent 34%),
+    linear-gradient(145deg, #090507 0%, #140b12 46%, #241018 100%);
   overscroll-behavior-y: contain;
   touch-action: manipulation;
 }
@@ -43,11 +44,11 @@ select {
 
 button {
   min-height: 46px;
-  border: 1px solid rgba(108, 224, 255, 0.25);
+  border: 1px solid rgba(255, 187, 118, 0.28);
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(0, 174, 255, 0.92), rgba(72, 82, 255, 0.9));
-  color: #ffffff;
-  box-shadow: 0 12px 28px rgba(0, 119, 255, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  background: linear-gradient(135deg, rgba(255, 140, 66, 0.94), rgba(214, 82, 118, 0.92));
+  color: #fffaf4;
+  box-shadow: 0 12px 28px rgba(255, 122, 65, 0.18), inset 0 1px 0 rgba(255, 244, 219, 0.24);
   cursor: pointer;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -59,8 +60,8 @@ button:active {
 }
 
 button:hover {
-  border-color: rgba(148, 234, 255, 0.55);
-  box-shadow: 0 15px 34px rgba(0, 119, 255, 0.3), 0 0 22px rgba(0, 221, 255, 0.12);
+  border-color: rgba(255, 206, 143, 0.54);
+  box-shadow: 0 15px 34px rgba(255, 122, 65, 0.24), 0 0 22px rgba(255, 169, 77, 0.1);
 }
 
 button:disabled {
@@ -72,10 +73,10 @@ input,
 select {
   width: 100%;
   min-height: 48px;
-  border: 1px solid rgba(123, 217, 255, 0.22);
+  border: 1px solid rgba(255, 190, 128, 0.2);
   border-radius: 16px;
-  background: rgba(4, 16, 32, 0.82);
-  color: #f4fbff;
+  background: rgba(24, 11, 18, 0.82);
+  color: #fff7ec;
   outline: none;
   padding: 0 0.95rem;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
@@ -83,8 +84,8 @@ select {
 
 input:focus,
 select:focus {
-  border-color: rgba(88, 220, 255, 0.82);
-  box-shadow: 0 0 0 4px rgba(0, 194, 255, 0.14);
+  border-color: rgba(255, 184, 108, 0.72);
+  box-shadow: 0 0 0 4px rgba(255, 157, 75, 0.13);
 }
 
 .app-shell {
@@ -98,9 +99,9 @@ select:focus {
 .modal-card {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(101, 213, 255, 0.2);
+  border: 1px solid rgba(255, 184, 108, 0.18);
   border-radius: 26px;
-  background: linear-gradient(145deg, rgba(10, 29, 54, 0.86), rgba(6, 14, 31, 0.76));
+  background: linear-gradient(145deg, rgba(38, 19, 25, 0.88), rgba(17, 8, 13, 0.8));
   box-shadow: 0 22px 60px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.07);
   backdrop-filter: blur(18px);
 }
@@ -112,7 +113,7 @@ select:focus {
   inset: 0;
   content: '';
   pointer-events: none;
-  background: linear-gradient(110deg, rgba(79, 218, 255, 0.12), transparent 35%, rgba(85, 111, 255, 0.12));
+  background: linear-gradient(110deg, rgba(255, 185, 94, 0.1), transparent 35%, rgba(255, 91, 139, 0.1));
 }
 
 .hero-card {
@@ -155,7 +156,7 @@ h3 {
 
 .eyebrow {
   margin-bottom: 0.3rem;
-  color: #6ee8ff;
+  color: #ffc274;
   font-size: 0.75rem;
   font-weight: 900;
   letter-spacing: 0.16em;
@@ -164,7 +165,7 @@ h3 {
 
 .subtle {
   margin-bottom: 0;
-  color: #9eb9d4;
+  color: #d0aa9a;
   font-size: 0.94rem;
   line-height: 1.45;
 }
@@ -186,9 +187,9 @@ h3 {
   top: max(8px, env(safe-area-inset-top));
   z-index: 20;
   padding: 8px;
-  border: 1px solid rgba(103, 219, 255, 0.18);
+  border: 1px solid rgba(255, 184, 108, 0.16);
   border-radius: 22px;
-  background: rgba(2, 10, 21, 0.78);
+  background: rgba(17, 8, 13, 0.8);
   backdrop-filter: blur(18px);
 }
 
@@ -233,8 +234,8 @@ h3 {
 }
 
 .lock-button.unlocked {
-  border-color: rgba(101, 255, 202, 0.35);
-  background: linear-gradient(135deg, #10b981, #00c2a8);
+  border-color: rgba(155, 255, 214, 0.35);
+  background: linear-gradient(135deg, #1fbf8f, #0f9f86);
 }
 
 .close-button {
@@ -250,11 +251,11 @@ h3 {
   display: inline-flex;
   align-items: center;
   min-height: 30px;
-  border: 1px solid rgba(110, 232, 255, 0.24);
+  border: 1px solid rgba(255, 198, 122, 0.24);
   border-radius: 999px;
   padding: 0.25rem 0.72rem;
-  background: rgba(0, 174, 255, 0.12);
-  color: #95ecff;
+  background: rgba(255, 153, 68, 0.12);
+  color: #ffd39a;
   font-size: 0.8rem;
   font-weight: 800;
 }
@@ -269,14 +270,14 @@ h3 {
   grid-template-columns: 92px minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
-  border: 1px solid rgba(119, 210, 255, 0.12);
+  border: 1px solid rgba(255, 196, 132, 0.11);
   border-radius: 16px;
   padding: 9px;
-  background: rgba(4, 16, 32, 0.54);
+  background: rgba(24, 11, 18, 0.54);
 }
 
 .profile-label {
-  color: #93aeca;
+  color: #cfa798;
   font-size: 0.77rem;
   font-weight: 800;
 }
@@ -284,14 +285,14 @@ h3 {
 .profile-value {
   min-width: 0;
   overflow-wrap: anywhere;
-  color: #f3fbff;
+  color: #fff7ef;
   font-size: 0.95rem;
   font-weight: 650;
 }
 
 .otp-row {
-  border-color: rgba(0, 238, 255, 0.26);
-  background: rgba(0, 174, 255, 0.1);
+  border-color: rgba(255, 184, 108, 0.24);
+  background: rgba(255, 132, 64, 0.08);
 }
 
 .code-text {
@@ -317,9 +318,9 @@ h3 {
 .code-panel,
 .metric-card,
 .result-card {
-  border: 1px solid rgba(100, 220, 255, 0.18);
+  border: 1px solid rgba(255, 188, 112, 0.17);
   border-radius: 20px;
-  background: linear-gradient(145deg, rgba(12, 39, 69, 0.88), rgba(6, 19, 38, 0.84));
+  background: linear-gradient(145deg, rgba(48, 24, 31, 0.86), rgba(24, 11, 18, 0.84));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
@@ -334,7 +335,7 @@ h3 {
 .code-panel span,
 .result-card p {
   margin: 0;
-  color: #dbf9ff;
+  color: #ffe5b8;
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 1.45rem;
   font-weight: 900;
@@ -343,13 +344,13 @@ h3 {
 
 .code-panel small,
 .result-card h3 {
-  color: #9cc2dc;
+  color: #d1a99a;
 }
 
 .field-label {
   display: flex;
   align-items: center;
-  color: #b7d9ee;
+  color: #e3bea8;
   font-size: 0.86rem;
   font-weight: 850;
 }
@@ -360,7 +361,7 @@ h3 {
   align-items: center;
   justify-content: space-between;
   padding: 13px;
-  color: #eaf9ff;
+  color: #fff2e3;
   font-weight: 800;
 }
 
@@ -372,8 +373,8 @@ h3 {
 }
 
 .status.loading {
-  background: rgba(0, 174, 255, 0.16);
-  color: #91ebff;
+  background: rgba(255, 154, 76, 0.14);
+  color: #ffd09a;
 }
 
 .status.error {
@@ -382,8 +383,8 @@ h3 {
 }
 
 .status.success {
-  background: rgba(55, 233, 155, 0.16);
-  color: #8dffd0;
+  background: rgba(55, 233, 155, 0.13);
+  color: #9cffd5;
 }
 
 .result-card {
@@ -405,7 +406,7 @@ h3 {
   align-items: center;
   justify-content: center;
   padding: max(14px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
-  background: rgba(0, 5, 14, 0.72);
+  background: rgba(10, 4, 8, 0.74);
   backdrop-filter: blur(8px);
 }
 
@@ -436,7 +437,7 @@ table {
 
 th,
 td {
-  border-bottom: 1px solid rgba(129, 220, 255, 0.13);
+  border-bottom: 1px solid rgba(255, 197, 133, 0.12);
   padding: 10px;
   text-align: left;
   vertical-align: top;
@@ -446,12 +447,12 @@ td {
 th {
   position: sticky;
   top: 0;
-  background: rgba(0, 128, 255, 0.2);
-  color: #aeefff;
+  background: rgba(255, 132, 64, 0.14);
+  color: #ffd09a;
 }
 
 td {
-  color: #e8f7ff;
+  color: #fff2e6;
 }
 
 .toast {
@@ -463,12 +464,12 @@ td {
   max-width: 520px;
   margin: 0 auto;
   transform: translateY(16px);
-  border: 1px solid rgba(117, 230, 255, 0.28);
+  border: 1px solid rgba(255, 196, 122, 0.26);
   border-radius: 18px;
   padding: 13px 16px;
-  background: rgba(2, 12, 28, 0.94);
-  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.36), 0 0 28px rgba(0, 213, 255, 0.16);
-  color: #ffffff;
+  background: rgba(17, 8, 13, 0.95);
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.36), 0 0 28px rgba(255, 153, 68, 0.12);
+  color: #fff7ed;
   text-align: center;
   opacity: 0;
   pointer-events: none;
