@@ -155,22 +155,17 @@ function App() {
     showToast(ok ? `${label} copied!` : 'Copy failed. Please copy manually.');
   }, [showToast]);
 
-  const copyLocationAndSwitchVpn = async () => {
-    await copyValue('Location', getFirstValue(currentProfileData, ['location', 'Location'], '-'));
-    window.location.href = 'shortcuts://run-shortcut?name=SwitchEXP';
-  };
-
   const openPlatform = useCallback(() => {
     window.open(currentPlatform === 'Instagram' ? 'https://www.instagram.com/' : 'https://www.threads.com/', '_blank');
   }, [currentPlatform]);
 
   const copyProfileField = useCallback(async (key, label, value) => {
-    if (key === 'location') {
-      await copyLocationAndSwitchVpn();
-      return;
-    }
     await copyValue(label, value);
-    if (COPY_OPENS_APP.has(key)) openPlatform();
+    if (key === 'location') {
+      window.location.href = 'shortcuts://run-shortcut?name=SwitchEXP';
+    } else if (COPY_OPENS_APP.has(key)) {
+      openPlatform();
+    }
   }, [copyValue, openPlatform]);
 
   const pickRandom = async (sheetName) => {
