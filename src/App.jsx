@@ -3,6 +3,7 @@ import { FIVESIM_PROXY_URL, PLATFORMS, SHEETS, USERS } from './config.js';
 import { buyInstagramNumber, cancelOrder as cancelFiveSimOrder, checkOrder, finishOrder, getPrices, getProfile } from './api/fivesim.js';
 import { fetchSheet, getSheetUrl, preloadSheets, updateSecretInSheet } from './api/sheets.js';
 import { cancelSMS, checkResend, checkSMS, getBalance as getSmspoolBalance, getHistory, getStock, orderSMS, resendSMS as resendSmspoolSMS } from './api/smspool.js';
+import { cancelSMS as cancelGrizzlySMS, checkSMS as checkGrizzlySMS, finishSMS as finishGrizzlySMS, getBalance as getGrizzlyBalance, getStock as getGrizzlyStock, orderSMS as orderGrizzlySMS } from './api/grizzly.js';
 import { copyToClipboard, readFromClipboard } from './utils/clipboard.js';
 import { getStoredJson, getStoredValue, setStoredJson, setStoredValue } from './utils/storage.js';
 import { generateTOTP, getTotpSecondsRemaining, isValidBase32, normalizeSecret } from './utils/totp.js';
@@ -20,6 +21,9 @@ const PROFILE_FIELDS = [
 ];
 
 const DAY_COLUMNS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+// Profile fields whose Copy button should also jump to the Instagram/Threads app after copying.
+const COPY_OPENS_APP = new Set(['username', 'igpassword', 'name', 'email', 'password', 'secret']);
 
 function getFirstValue(row, aliases, fallback = '-') {
   for (const alias of aliases) {
@@ -159,6 +163,15 @@ function App() {
   const openPlatform = useCallback(() => {
     window.open(currentPlatform === 'Instagram' ? 'https://www.instagram.com/' : 'https://www.threads.com/', '_blank');
   }, [currentPlatform]);
+
+  const copyProfileField = useCallback(async (key, label, value) => {
+    if (key === 'location') {
+      await copyLocationAndSwitchVpn();
+      return;
+    }
+    await copyValue(label, value);
+    if (COPY_OPENS_APP.has(key)) openPlatform();
+  }, [copyValue, openPlatform]);
 
   const pickRandom = async (sheetName) => {
     try {
@@ -346,6 +359,12 @@ function App() {
         setBalanceText(balance.balance !== undefined ? `Balance: $${Number.isNaN(balanceValue) ? balance.balance : balanceValue.toFixed(2)}` : 'Balance: $0.00');
         const stock = await getStock(key);
         setStockText(stock?.success && stock.amount !== undefined ? `Instagram/Threads SMS available numbers: ${stock.amount}` : 'Instagram/Threads SMS available numbers: Error');
+      } else if (smsProvider === 'grizzly') {
+        const balance = await getGrizzlyBalance(key);
+        const balanceValue = Number.parseFloat(balance.balance);
+        setBalanceText(balance.success && !Number.isNaN(balanceValue) ? `Balance: $${balanceValue.toFixed(2)}` : 'Balance: Error');
+        const stock = await getGrizzlyStock(key);
+        setStockText(stock?.success && stock.amount !== undefined ? `Instagram/Threads SMS available numbers: ${stock.amount}` : 'Instagram/Threads SMS available numbers: Error');
       } else {
         const profile = await getProfile(FIVESIM_PROXY_URL, key);
         setBalanceText(`Balance: $${Number.parseFloat(profile.balance || 0).toFixed(2)}`);
@@ -389,6 +408,33 @@ function App() {
             if (smsCheck?.status === 8) updateStatus('Activating number... Please wait before sending SMS', 'loading');
             if (smsCheck?.status === 1) updateStatus('Number is ready. Waiting for SMS...', 'loading');
             if (smsCheck?.sms) {
+              clearPolling();
+              setSmsCode(getSmsTextValue(smsCheck.sms));
+              setCurrentOrderId(null);
+              updateStatus('SMS received!', 'success');
+              setOrdering(false);
+            }
+          } catch {
+          }
+        }, 5000);
+      } else if (smsProvider === 'grizzly') {
+        const order = await orderGrizzlySMS(key);
+        if (!order.success) throw new Error(order.message || 'Failed to order SMS');
+        setCurrentOrderId(order.order_id);
+        setPhoneNumber(order.phonenumber);
+        updateStatus('Number ready. Waiting for SMS...', 'loading');
+
+        let attempts = 0;
+        pollingRef.current = setInterval(async () => {
+          attempts += 1;
+          updateStatus(`Waiting for SMS... (attempt ${attempts})`, 'loading');
+          try {
+            const smsCheck = await checkGrizzlySMS(key, order.order_id);
+            if (smsCheck?.status === 'CANCEL') {
+              clearPolling();
+              updateStatus('Order cancelled by provider', 'error');
+              setOrdering(false);
+            } else if (smsCheck?.status === 'OK' && smsCheck.sms) {
               clearPolling();
               setSmsCode(getSmsTextValue(smsCheck.sms));
               setCurrentOrderId(null);
@@ -443,6 +489,9 @@ function App() {
     try {
       if (smsProvider === '5sim') {
         await cancelFiveSimOrder(FIVESIM_PROXY_URL, key, currentOrderId);
+      } else if (smsProvider === 'grizzly') {
+        const result = await cancelGrizzlySMS(key, currentOrderId);
+        if (!result.success) throw new Error(result.message || 'Failed to cancel');
       } else {
         const result = await cancelSMS(key, currentOrderId);
         if (!result.success) throw new Error(result.message || 'Failed to cancel');
@@ -459,8 +508,8 @@ function App() {
   };
 
   const resendSMS = async () => {
-    if (smsProvider === '5sim') {
-      updateStatus('Resend not supported on 5SIM yet', 'error');
+    if (smsProvider !== 'smspool') {
+      updateStatus('Resend is only supported on SMSPool', 'error');
       return;
     }
     const key = apiKey.trim();
@@ -531,6 +580,11 @@ function App() {
     if (smsProvider === '5sim' && currentOrderId && apiKey.trim()) {
       try {
         await finishOrder(FIVESIM_PROXY_URL, apiKey.trim(), currentOrderId);
+      } catch {
+      }
+    } else if (smsProvider === 'grizzly' && currentOrderId && apiKey.trim()) {
+      try {
+        await finishGrizzlySMS(apiKey.trim(), currentOrderId);
       } catch {
       }
     }
@@ -667,7 +721,7 @@ function App() {
                 <span className="profile-label">{label}</span>
                 <span className="profile-value">{value}</span>
                 {canCopy && (
-                  <button className="mini-button" onClick={() => key === 'location' ? copyLocationAndSwitchVpn() : copyValue(label, value)}>Copy</button>
+                  <button className="mini-button" onClick={() => copyProfileField(key, label, value)}>Copy</button>
                 )}
               </div>
             );
@@ -731,10 +785,11 @@ function App() {
             <select id="smsProvider" value={smsProvider} onChange={(event) => setSmsProvider(event.target.value)}>
               <option value="smspool">SMSPool.net</option>
               <option value="5sim">5SIM.net</option>
+              <option value="grizzly">Grizzly SMS</option>
             </select>
 
             <label className="field-label" htmlFor="apiKey">
-              {smsProvider === 'smspool' ? 'SMSPool API Key' : '5SIM Bearer Token'}
+              {smsProvider === 'smspool' ? 'SMSPool API Key' : smsProvider === '5sim' ? '5SIM Bearer Token' : 'Grizzly SMS API Key'}
               <button className={`lock-button ${apiLocked ? 'unlocked' : ''}`} onClick={() => {
                 setApiLocked((previous) => {
                   setStoredValue('apiKeyLocked', !previous);

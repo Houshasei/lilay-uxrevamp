@@ -12,6 +12,8 @@ A React + Vite revamp of the Lilay profile manager, optimized for iPhone Safari 
 - TOTP generation with live countdown using Web Crypto
 - SMSPool ordering, balance, stock, cancel, resend, and polling
 - 5SIM support through a Cloudflare Worker proxy
+- Grizzly SMS support (handler_api.php protocol, USA Instagram numbers)
+- Copying account fields (Username, IG Password, Name, Email, Password, Secret) jumps to the Instagram/Threads app
 - Browser-remembered settings and user-entered API keys via `localStorage`
 
 ## Local Development
@@ -33,13 +35,15 @@ The production output is generated in `dist`.
 
 ## Environment Variables
 
-Create `.env.local` if you need to override the 5SIM proxy URL:
+Create `.env.local` if you need to override the 5SIM proxy URL or the Grizzly SMS endpoint:
 
 ```bash
 VITE_FIVESIM_PROXY_URL=https://your-worker.your-subdomain.workers.dev
+# Optional: only set this if api.grizzlysms.com blocks browser (CORS) requests and you need a proxy.
+VITE_GRIZZLY_API_URL=https://your-proxy.example.com/stubs/handler_api.php
 ```
 
-The app does not hardcode SMS provider API keys. Users enter SMSPool API keys or 5SIM bearer tokens in the UI, and the browser remembers them with `localStorage`.
+The app does not hardcode SMS provider API keys. Users enter SMSPool API keys, 5SIM bearer tokens, or Grizzly SMS API keys in the UI, and the browser remembers them per-provider with `localStorage`.
 
 ## Cloudflare Pages Deployment
 
