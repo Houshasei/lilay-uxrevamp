@@ -3,7 +3,7 @@ import { FIVESIM_PROXY_URL, PLATFORMS, SHEETS, USERS } from './config.js';
 import { buyInstagramNumber, cancelOrder as cancelFiveSimOrder, checkOrder, finishOrder, getPrices, getProfile } from './api/fivesim.js';
 import { fetchSheet, getSheetUrl, preloadSheets, updateSecretInSheet } from './api/sheets.js';
 import { cancelSMS, checkResend, checkSMS, getBalance as getSmspoolBalance, getHistory, getStock, orderSMS, resendSMS as resendSmspoolSMS } from './api/smspool.js';
-import { cancelSMS as cancelGrizzlySMS, checkSMS as checkGrizzlySMS, finishSMS as finishGrizzlySMS, getBalance as getGrizzlyBalance, getStock as getGrizzlyStock, orderSMS as orderGrizzlySMS } from './api/grizzly.js';
+import { cancelSMS as cancelGrizzlySMS, checkSMS as checkGrizzlySMS, getBalance as getGrizzlyBalance, getStock as getGrizzlyStock, orderSMS as orderGrizzlySMS } from './api/grizzly.js';
 import { copyToClipboard, readFromClipboard } from './utils/clipboard.js';
 import { getStoredJson, getStoredValue, setStoredJson, setStoredValue } from './utils/storage.js';
 import { generateTOTP, getTotpSecondsRemaining, isValidBase32, normalizeSecret } from './utils/totp.js';
@@ -578,8 +578,12 @@ function App() {
       } catch {
       }
     } else if (smsProvider === 'grizzly' && currentOrderId && apiKey.trim()) {
+      // Grizzly blocks cancellation for the first 180s of an order. Attempt it anyway
+      // (it frees/refunds the number once allowed) but ignore any failure — abandoned
+      // numbers are auto-cancelled by Grizzly, so we just clear state and let the user
+      // order another number right away.
       try {
-        await finishGrizzlySMS(apiKey.trim(), currentOrderId);
+        await cancelGrizzlySMS(apiKey.trim(), currentOrderId);
       } catch {
       }
     }
@@ -588,7 +592,7 @@ function App() {
     setPhoneNumber('');
     setSmsCode('');
     setOrdering(false);
-    updateStatus('Reset complete', 'success');
+    updateStatus('Reset complete — you can order a new number', 'success');
   };
 
   const toggleSection = (sectionId) => {
@@ -803,7 +807,9 @@ function App() {
             <div className="quick-grid three">
               <button onClick={getNumber} disabled={ordering}>{ordering ? 'Getting number...' : 'Get US Instagram Number'}</button>
               {smsProvider === 'smspool' && <button onClick={resendSMS} disabled={resending}>{resending ? 'Searching...' : 'Resend'}</button>}
-              {currentOrderId && <button onClick={cancelOrder}>Cancel Order</button>}
+              {currentOrderId && (smsProvider === 'grizzly'
+                ? <button onClick={resetSMS}>Reset & Get New</button>
+                : <button onClick={cancelOrder}>Cancel Order</button>)}
             </div>
 
             {status.message && <div className={`status ${status.type}`}>{status.message}</div>}
