@@ -9,6 +9,7 @@ A React + Vite revamp of the Lilay profile manager, optimized for iPhone Safari 
 - Profile navigation with remembered last profile
 - Copy helpers with Safari-friendly clipboard fallback
 - Instagram/Threads opening and iOS Shortcuts links
+- Container switching via iOS Shortcuts, with a Settings toggle for Legacy (per-container named shortcuts) or cranectl (single Crane CLI shortcut), remembered per browser
 - TOTP generation with live countdown using Web Crypto
 - SMSPool ordering, balance, stock, cancel, resend, and polling
 - 5SIM support through a Cloudflare Worker proxy

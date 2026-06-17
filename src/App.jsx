@@ -47,6 +47,7 @@ function getSmsTextValue(text) {
 function App() {
   const [currentUser, setCurrentUser] = useState(() => getStoredValue('currentUser', 'Ces'));
   const [currentPlatform, setCurrentPlatform] = useState(() => getStoredValue('currentPlatform', 'Instagram'));
+  const [containerMethod, setContainerMethod] = useState(() => getStoredValue('containerMethod', 'legacy'));
   const [sheetCache, setSheetCache] = useState({});
   const [profiles, setProfiles] = useState([]);
   const [currentProfile, setCurrentProfile] = useState(() => Number.parseInt(getStoredValue('lastProfileIndex', '0'), 10) || 0);
@@ -75,7 +76,7 @@ function App() {
     sms: getStoredValue('smsMinimized', 'false') === 'true',
   }));
   const [located, setLocated] = useState(false);
-  const [settingsDraft, setSettingsDraft] = useState({ user: currentUser, platform: currentPlatform });
+  const [settingsDraft, setSettingsDraft] = useState({ user: currentUser, platform: currentPlatform, method: containerMethod });
 
   const cacheRef = useRef({});
   const pollingRef = useRef(null);
@@ -109,10 +110,18 @@ function App() {
   }, []);
 
   const runContainerShortcut = useCallback((container = getFirstValue(currentProfileData, ['container', 'Container', 'Container ID'], '')) => {
-    const containerNumber = Number.parseInt(container, 10);
+    const value = String(container ?? '').trim();
+    if (!value || value === '-') return;
+    if (containerMethod === 'cranectl') {
+      // New method: one shortcut per platform that runs `cranectl --switch <app> name:<input>`.
+      window.location.href = `shortcuts://run-shortcut?name=Switch${currentPlatform}&input=${encodeURIComponent(value)}`;
+      return;
+    }
+    // Legacy method: one named shortcut per container, e.g. Instagram3 / Threads5.
+    const containerNumber = Number.parseInt(value, 10);
     if (!containerNumber) return;
     window.location.href = `shortcuts://run-shortcut?name=${currentPlatform}${containerNumber}`;
-  }, [currentPlatform, currentProfileData]);
+  }, [containerMethod, currentPlatform, currentProfileData]);
 
   const loadSheets = useCallback(async () => {
     setLoadingSheets(true);
@@ -606,10 +615,13 @@ function App() {
   const saveSettings = () => {
     const nextUser = settingsDraft.user;
     const nextPlatform = settingsDraft.platform;
+    const nextMethod = settingsDraft.method;
     setCurrentUser(nextUser);
     setCurrentPlatform(nextPlatform);
+    setContainerMethod(nextMethod);
     setStoredValue('currentUser', nextUser);
     setStoredValue('currentPlatform', nextPlatform);
+    setStoredValue('containerMethod', nextMethod);
     setActiveModal(null);
     showToast('Settings saved!');
   };
@@ -690,7 +702,7 @@ function App() {
           <p className="subtle">Mobile-first tools for account creation, 2FA, SMS, and posting workflows.</p>
         </div>
         <button className="icon-button" onClick={() => {
-          setSettingsDraft({ user: currentUser, platform: currentPlatform });
+          setSettingsDraft({ user: currentUser, platform: currentPlatform, method: containerMethod });
           setActiveModal('settings');
         }}>⚙️ Settings</button>
       </section>
@@ -850,6 +862,12 @@ function App() {
                 <select id="platformSelect" value={settingsDraft.platform} onChange={(event) => setSettingsDraft((draft) => ({ ...draft, platform: event.target.value }))}>
                   {PLATFORMS.map((platform) => <option key={platform} value={platform}>{platform}</option>)}
                 </select>
+                <label className="field-label" htmlFor="methodSelect">Container Switching</label>
+                <select id="methodSelect" value={settingsDraft.method} onChange={(event) => setSettingsDraft((draft) => ({ ...draft, method: event.target.value }))}>
+                  <option value="legacy">Legacy (named shortcuts)</option>
+                  <option value="cranectl">cranectl (Crane CLI)</option>
+                </select>
+                <p className="subtle">Legacy runs a shortcut per container (e.g. {settingsDraft.platform}3). cranectl runs one Switch{settingsDraft.platform} shortcut with the container as input.</p>
                 <button onClick={saveSettings}>Save Settings</button>
               </div>
             )}
