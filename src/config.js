@@ -5,6 +5,7 @@ export const USER_CONFIG = {
   LJ: { id: 'AKfycbwL5hpGZ2vq7nos3V7vouEEgnaeKgoVPN9w7MEavlM6YGgSIYhwg6VpFGpv5mkitt_R' },
   EJ: { id: 'AKfycbw66O-DXukXjUij-6cuG1af8Cu_p3yzIkXFOGCm_mjARDoEXfqLlFg_E-uw09iP90sk' },
   Yali: { id: 'AKfycbzlC1a9Cs32q1oMrpNpoxGyMe-_-4I5kXhsfE96dPfLjPAUggPrhDqOl9Esv8TV3PA9'},
+  Rub: { id: 'AKfycbzJ64VAmYdKQmIpYuSFVvJNNR3u653StVxNLetksBLAeak0tS-AQTm85DluNWms1vay'},
 };
 
 export const USERS = Object.keys(USER_CONFIG);
