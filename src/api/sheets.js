@@ -6,16 +6,26 @@ export function getSheetUrl(user) {
 
 export async function fetchSheet(sheetUrl, sheetName, cache) {
   if (cache[sheetName]) return cache[sheetName];
-  const response = await fetch(`${sheetUrl}?sheet=${encodeURIComponent(sheetName)}`);
-  if (!response.ok) throw new Error(`Failed to fetch ${sheetName}`);
-  const data = await response.json();
-  cache[sheetName] = data;
-  return data;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(`${sheetUrl}?sheet=${encodeURIComponent(sheetName)}`, {
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`Failed to fetch ${sheetName}`);
+    const data = await response.json();
+    cache[sheetName] = data;
+    return data;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function preloadSheets(sheetUrl, sheetNames) {
   const cache = {};
-  await Promise.all(sheetNames.map((sheetName) => fetchSheet(sheetUrl, sheetName, cache)));
+  for (const sheetName of sheetNames) {
+    await fetchSheet(sheetUrl, sheetName, cache);
+  }
   return cache;
 }
 
