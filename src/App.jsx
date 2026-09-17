@@ -25,6 +25,11 @@ const COPY_OPENS_APP = new Set(['username', 'igpassword', 'name', 'email', 'pass
 
 // Container Management actions -> the Shortcut suffix that runs the matching cranectl loop.
 const CONTAINER_ACTION_LABELS = { create: 'Create', delete: 'Delete', reset: 'Delete & Create' };
+const CONTAINER_ACTION_SUCCESS = {
+  create: 'Container created successfully',
+  delete: 'Container deleted successfully',
+  reset: 'Container deleted and created successfully',
+};
 
 function getFirstValue(row, aliases, fallback = '-') {
   for (const alias of aliases) {
@@ -127,7 +132,7 @@ function App() {
       const normalizedIndex = nextProfiles.length ? ((savedIndex % nextProfiles.length) + nextProfiles.length) % nextProfiles.length : 0;
       setCurrentProfile(normalizedIndex);
       setStoredValue('lastProfileIndex', normalizedIndex);
-      showToast('Sheets refreshed!');
+      showToast(nextProfiles.length ? 'Sheets refreshed!' : 'Refreshed — no profiles found');
     } catch {
       showToast('Refresh failed');
     } finally {
@@ -513,7 +518,7 @@ function App() {
     // Each Shortcut loops cranectl over the newline-separated names it receives as input.
     const shortcut = `${action === 'reset' ? 'Reset' : action === 'delete' ? 'Delete' : 'Create'}${currentPlatform}`;
     setContainerConfirm(null);
-    showToast(`Running ${CONTAINER_ACTION_LABELS[action]} for ${names.length} container(s)...`);
+    showToast(CONTAINER_ACTION_SUCCESS[action]);
     window.location.href = `shortcuts://run-shortcut?name=${shortcut}&input=${encodeURIComponent(names.join('\n'))}`;
   };
 
@@ -682,31 +687,6 @@ function App() {
       </section>
 
       <section className="glass-card">
-        <div className="section-heading">
-          <h2>🔐 2FA Generator</h2>
-          <button className="mini-button" onClick={() => toggleSection('tfa')}>{collapsed.tfa ? '+' : '−'}</button>
-        </div>
-        {!collapsed.tfa && (
-          <div className="stack">
-            <div className="input-with-button">
-              <input value={totpSecret} onChange={(event) => setTotpSecret(event.target.value)} onPaste={() => setTimeout(() => startManualTOTP(), 100)} placeholder="Paste TOTP secret here" />
-              <button onClick={pasteSecret}>Paste</button>
-            </div>
-            <div className="code-panel">
-              <span>{manualTotp}</span>
-              <small>{manualTimer}</small>
-              <button className="mini-button" onClick={() => manualTotp === '-' ? showToast('No TOTP generated') : copyValue('TOTP', manualTotp)}>Copy</button>
-            </div>
-            <div className="quick-grid three">
-              <button onClick={() => startManualTOTP()}>Generate 2FA</button>
-              <button onClick={resetManualTOTP}>Reset</button>
-              <button onClick={writeSecretToSheet}>Write key to sheet</button>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section className="glass-card">
         <div className="section-heading align-start">
           <div>
             <h2>📱 SMS Provider</h2>
@@ -767,6 +747,31 @@ function App() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+      </section>
+
+      <section className="glass-card">
+        <div className="section-heading">
+          <h2>🔐 2FA Generator</h2>
+          <button className="mini-button" onClick={() => toggleSection('tfa')}>{collapsed.tfa ? '+' : '−'}</button>
+        </div>
+        {!collapsed.tfa && (
+          <div className="stack">
+            <div className="input-with-button">
+              <input value={totpSecret} onChange={(event) => setTotpSecret(event.target.value)} onPaste={() => setTimeout(() => startManualTOTP(), 100)} placeholder="Paste TOTP secret here" />
+              <button onClick={pasteSecret}>Paste</button>
+            </div>
+            <div className="code-panel">
+              <span>{manualTotp}</span>
+              <small>{manualTimer}</small>
+              <button className="mini-button" onClick={() => manualTotp === '-' ? showToast('No TOTP generated') : copyValue('TOTP', manualTotp)}>Copy</button>
+            </div>
+            <div className="quick-grid three">
+              <button onClick={() => startManualTOTP()}>Generate 2FA</button>
+              <button onClick={resetManualTOTP}>Reset</button>
+              <button onClick={writeSecretToSheet}>Write key to sheet</button>
+            </div>
           </div>
         )}
       </section>
