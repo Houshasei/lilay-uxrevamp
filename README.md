@@ -17,6 +17,7 @@ A React + Vite revamp of the Lilay profile manager, optimized for iPhone Safari 
 - Grizzly SMS support (handler_api.php protocol, USA Instagram numbers)
 - Copying account fields (Username, IG Password, Name, Email, Password, Secret) jumps to the Instagram/Threads app
 - Browser-remembered settings and user-entered API keys via `localStorage`
+- Installable PWA — Add to Home Screen on iOS Safari for a fullscreen, app-like experience (manifest, apple-touch icon, standalone display)
 
 ## Local Development
 
