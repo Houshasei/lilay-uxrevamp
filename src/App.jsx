@@ -5,7 +5,7 @@ import { fetchSheet, getSheetUrl, preloadSheets, updateSecretInSheet } from './a
 import { cancelSMS, checkResend, checkSMS, getBalance as getSmspoolBalance, getHistory, getStock, orderSMS, resendSMS as resendSmspoolSMS } from './api/smspool.js';
 import { cancelSMS as cancelGrizzlySMS, checkSMS as checkGrizzlySMS, getBalance as getGrizzlyBalance, getStock as getGrizzlyStock, orderSMS as orderGrizzlySMS } from './api/grizzly.js';
 import { copyToClipboard, readFromClipboard } from './utils/clipboard.js';
-import { getStoredJson, getStoredValue, setStoredJson, setStoredValue } from './utils/storage.js';
+import { getStoredValue, setStoredValue } from './utils/storage.js';
 import { generateTOTP, getTotpSecondsRemaining, isValidBase32, normalizeSecret } from './utils/totp.js';
 
 const PROFILE_FIELDS = [
@@ -20,10 +20,11 @@ const PROFILE_FIELDS = [
   { key: 'secret', label: 'Secret', aliases: ['secret', 'Secret'] },
 ];
 
-const DAY_COLUMNS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
 // Profile fields whose Copy button should also jump to the Instagram/Threads app after copying.
 const COPY_OPENS_APP = new Set(['username', 'igpassword', 'name', 'email', 'password', 'secret']);
+
+// Container Management actions -> the Shortcut suffix that runs the matching cranectl loop.
+const CONTAINER_ACTION_LABELS = { create: 'Create', delete: 'Delete', reset: 'Delete & Create' };
 
 function getFirstValue(row, aliases, fallback = '-') {
   for (const alias of aliases) {
@@ -47,7 +48,8 @@ function getSmsTextValue(text) {
 function App() {
   const [currentUser, setCurrentUser] = useState(() => getStoredValue('currentUser', 'Ces'));
   const [currentPlatform, setCurrentPlatform] = useState(() => getStoredValue('currentPlatform', 'Instagram'));
-  const [containerMethod, setContainerMethod] = useState(() => getStoredValue('containerMethod', 'legacy'));
+  const [containerText, setContainerText] = useState('');
+  const [containerConfirm, setContainerConfirm] = useState(null);
   const [sheetCache, setSheetCache] = useState({});
   const [profiles, setProfiles] = useState([]);
   const [currentProfile, setCurrentProfile] = useState(() => Number.parseInt(getStoredValue('lastProfileIndex', '0'), 10) || 0);
@@ -55,7 +57,6 @@ function App() {
   const [toast, setToast] = useState('');
   const [status, setStatus] = useState({ message: '', type: '' });
   const [activeModal, setActiveModal] = useState(null);
-  const [modalRows, setModalRows] = useState([]);
   const [totpSecret, setTotpSecret] = useState('');
   const [manualTotp, setManualTotp] = useState('-');
   const [manualTimer, setManualTimer] = useState('-');
@@ -74,9 +75,9 @@ function App() {
   const [collapsed, setCollapsed] = useState(() => ({
     tfa: getStoredValue('tfaMinimized', 'false') === 'true',
     sms: getStoredValue('smsMinimized', 'false') === 'true',
+    containers: getStoredValue('containersMinimized', 'false') === 'true',
   }));
-  const [located, setLocated] = useState(false);
-  const [settingsDraft, setSettingsDraft] = useState({ user: currentUser, platform: currentPlatform, method: containerMethod });
+  const [settingsDraft, setSettingsDraft] = useState({ user: currentUser, platform: currentPlatform });
 
   const cacheRef = useRef({});
   const pollingRef = useRef(null);
@@ -84,13 +85,9 @@ function App() {
   const profileOtpRef = useRef(null);
   const manualTotpRef = useRef(null);
   const toastRef = useRef(null);
-  const pickedPostIndexes = useRef(getStoredJson('pickedPostIndexes', {}));
-  const lastFollowed = useRef([]);
-  const followCopyCount = useRef(0);
 
   const sheetUrl = useMemo(() => getSheetUrl(currentUser), [currentUser]);
   const currentProfileData = profiles[currentProfile] || {};
-  const followData = sheetCache.Follow || [];
 
   const showToast = useCallback((message) => {
     setToast(message);
@@ -112,16 +109,9 @@ function App() {
   const runContainerShortcut = useCallback((container = getFirstValue(currentProfileData, ['container', 'Container', 'Container ID'], '')) => {
     const value = String(container ?? '').trim();
     if (!value || value === '-') return;
-    if (containerMethod === 'cranectl') {
-      // New method: one shortcut per platform that runs `cranectl --switch <app> name:<input>`.
-      window.location.href = `shortcuts://run-shortcut?name=Switch${currentPlatform}&input=${encodeURIComponent(value)}`;
-      return;
-    }
-    // Legacy method: one named shortcut per container, e.g. Instagram3 / Threads5.
-    const containerNumber = Number.parseInt(value, 10);
-    if (!containerNumber) return;
-    window.location.href = `shortcuts://run-shortcut?name=${currentPlatform}${containerNumber}`;
-  }, [containerMethod, currentPlatform, currentProfileData]);
+    // Runs a per-platform Shortcut that calls `cranectl --switch <app> name:<input>`.
+    window.location.href = `shortcuts://run-shortcut?name=Switch${currentPlatform}&input=${encodeURIComponent(value)}`;
+  }, [currentPlatform, currentProfileData]);
 
   const loadSheets = useCallback(async () => {
     setLoadingSheets(true);
@@ -156,7 +146,6 @@ function App() {
     const normalized = ((nextIndex % profiles.length) + profiles.length) % profiles.length;
     setCurrentProfile(normalized);
     setStoredValue('lastProfileIndex', normalized);
-    setLocated(false);
   }, [profiles.length]);
 
   const copyValue = useCallback(async (label, value) => {
@@ -190,102 +179,6 @@ function App() {
     } catch {
       showToast(`Failed to load ${sheetName}`);
     }
-  };
-
-  const pickTodayPost = async () => {
-    try {
-      showToast("Picking today's post...");
-      const posts = await getCachedSheet('Posts');
-      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const today = days[new Date().getDay()];
-      const username = getFirstValue(currentProfileData, ['username', 'Username'], 'unknown');
-      const todayPosts = posts.map((row, index) => ({ index, text: row[today] })).filter((post) => post.text?.trim());
-      if (!todayPosts.length) {
-        showToast(`No posts found for ${today}`);
-        return;
-      }
-
-      if (!pickedPostIndexes.current[username]) pickedPostIndexes.current[username] = {};
-      if (!pickedPostIndexes.current[username][today]) pickedPostIndexes.current[username][today] = [];
-
-      const used = pickedPostIndexes.current[username][today];
-      let unused = todayPosts.filter((post) => !used.includes(post.index));
-      if (!unused.length) {
-        pickedPostIndexes.current[username][today] = [];
-        unused = todayPosts;
-        showToast('All posts used for this account, restarting pool');
-      }
-
-      const selected = unused[Math.floor(Math.random() * unused.length)];
-      pickedPostIndexes.current[username][today].push(selected.index);
-      setStoredJson('pickedPostIndexes', pickedPostIndexes.current);
-
-      const location = getFirstValue(currentProfileData, ['location', 'Location'], '');
-      await copyToClipboard(String(selected.text).replace(/\(loc\)/gi, location));
-      showToast('Post copied with location!');
-      openPlatform();
-    } catch {
-      showToast('Error picking post');
-    }
-  };
-
-  const pickFollow = async () => {
-    try {
-      showToast('Picking follow...');
-      const available = followData.filter((item) => !lastFollowed.current.includes(item));
-      if (!followData.length) {
-        showToast('No follow data available');
-        return;
-      }
-      if (!available.length) {
-        lastFollowed.current = [];
-        return pickFollow();
-      }
-      const choice = available[Math.floor(Math.random() * available.length)];
-      await copyToClipboard(Object.values(choice || {})[0] || '');
-      lastFollowed.current.push(choice);
-      followCopyCount.current += 1;
-      if (followCopyCount.current >= 5) {
-        lastFollowed.current = [];
-        followCopyCount.current = 0;
-      }
-      showToast('Follow data copied!');
-      openPlatform();
-    } catch {
-      showToast('Error picking follow');
-    }
-  };
-
-  const openAccountsModal = async () => {
-    try {
-      setModalRows(await getCachedSheet('Accounts'));
-      setActiveModal('accounts');
-    } catch {
-      showToast('Failed to load accounts');
-    }
-  };
-
-  const openPostsModal = async () => {
-    try {
-      setModalRows(await getCachedSheet('Posts'));
-      setActiveModal('posts');
-    } catch {
-      showToast('Failed to load posts');
-    }
-  };
-
-  const searchLocation = () => {
-    const location = getFirstValue(currentProfileData, ['location', 'Location'], '');
-    if (!location) {
-      showToast('Location not found for this profile.');
-      return;
-    }
-    if (located) {
-      window.open('https://www.threads.com/', '_blank');
-      return;
-    }
-    setLocated(true);
-    window.open(`https://www.threads.com/search?q=${encodeURIComponent(location)}&serp_type=default&hl=en`, '_blank');
   };
 
   const startManualTOTP = useCallback((secretValue = totpSecret) => {
@@ -604,6 +497,26 @@ function App() {
     updateStatus('Reset complete — you can order a new number', 'success');
   };
 
+  const requestContainerAction = (action) => {
+    const names = containerText.split('\n').map((line) => line.trim()).filter(Boolean);
+    if (!names.length) {
+      showToast('Enter at least one container name');
+      return;
+    }
+    setContainerConfirm({ action, names });
+  };
+
+  const runContainerAction = () => {
+    if (!containerConfirm) return;
+    const { action, names } = containerConfirm;
+    // create -> Create<Platform>, delete -> Delete<Platform>, reset -> Reset<Platform>.
+    // Each Shortcut loops cranectl over the newline-separated names it receives as input.
+    const shortcut = `${action === 'reset' ? 'Reset' : action === 'delete' ? 'Delete' : 'Create'}${currentPlatform}`;
+    setContainerConfirm(null);
+    showToast(`Running ${CONTAINER_ACTION_LABELS[action]} for ${names.length} container(s)...`);
+    window.location.href = `shortcuts://run-shortcut?name=${shortcut}&input=${encodeURIComponent(names.join('\n'))}`;
+  };
+
   const toggleSection = (sectionId) => {
     setCollapsed((previous) => {
       const next = { ...previous, [sectionId]: !previous[sectionId] };
@@ -615,13 +528,10 @@ function App() {
   const saveSettings = () => {
     const nextUser = settingsDraft.user;
     const nextPlatform = settingsDraft.platform;
-    const nextMethod = settingsDraft.method;
     setCurrentUser(nextUser);
     setCurrentPlatform(nextPlatform);
-    setContainerMethod(nextMethod);
     setStoredValue('currentUser', nextUser);
     setStoredValue('currentPlatform', nextPlatform);
-    setStoredValue('containerMethod', nextMethod);
     setActiveModal(null);
     showToast('Settings saved!');
   };
@@ -702,7 +612,7 @@ function App() {
           <p className="subtle">Mobile-first tools for account creation, 2FA, SMS, and posting workflows.</p>
         </div>
         <button className="icon-button" onClick={() => {
-          setSettingsDraft({ user: currentUser, platform: currentPlatform, method: containerMethod });
+          setSettingsDraft({ user: currentUser, platform: currentPlatform });
           setActiveModal('settings');
         }}>⚙️ Settings</button>
       </section>
@@ -745,16 +655,30 @@ function App() {
         </div>
       </section>
 
-      <section className="quick-grid tool-grid">
+      <section className="quick-grid two">
         <button onClick={() => pickRandom('Caption')}>🖊 Pick Caption</button>
-        <button onClick={pickTodayPost}>📅 Pick Post</button>
-        <button onClick={() => pickRandom('Reply')}>💬 Pick Reply</button>
-        <button onClick={() => pickRandom('Comments')}>💭 Pick Comment</button>
-        <button onClick={openAccountsModal}>📄 Show Accounts</button>
-        <button onClick={openPostsModal}>📝 Show Posts</button>
-        <button onClick={pickFollow}>👥 Follow People</button>
-        <button onClick={searchLocation}>📍 Search Location</button>
-        <button onClick={() => runContainerShortcut()}>⚡ Run Container</button>
+        <button onClick={() => pickRandom('Reply')}>🔗 Pick Link</button>
+      </section>
+
+      <section className="glass-card">
+        <div className="section-heading align-start">
+          <div>
+            <h2>📦 Container Management</h2>
+            <p className="subtle">{currentPlatform} · runs cranectl via Shortcut</p>
+          </div>
+          <button className="mini-button" onClick={() => toggleSection('containers')}>{collapsed.containers ? '+' : '−'}</button>
+        </div>
+        {!collapsed.containers && (
+          <div className="stack">
+            <label className="field-label" htmlFor="containerText">Container names / IDs — one per line</label>
+            <textarea id="containerText" value={containerText} onChange={(event) => setContainerText(event.target.value)} placeholder="One container name or ID per line" rows={5} />
+            <div className="quick-grid three">
+              <button onClick={() => requestContainerAction('create')}>Create</button>
+              <button onClick={() => requestContainerAction('delete')}>Delete</button>
+              <button onClick={() => requestContainerAction('reset')}>Delete &amp; Create</button>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="glass-card">
@@ -862,47 +786,35 @@ function App() {
                 <select id="platformSelect" value={settingsDraft.platform} onChange={(event) => setSettingsDraft((draft) => ({ ...draft, platform: event.target.value }))}>
                   {PLATFORMS.map((platform) => <option key={platform} value={platform}>{platform}</option>)}
                 </select>
-                <label className="field-label" htmlFor="methodSelect">Container Switching</label>
-                <select id="methodSelect" value={settingsDraft.method} onChange={(event) => setSettingsDraft((draft) => ({ ...draft, method: event.target.value }))}>
-                  <option value="legacy">Legacy (named shortcuts)</option>
-                  <option value="cranectl">cranectl (Crane CLI)</option>
-                </select>
-                <p className="subtle">Legacy runs a shortcut per container (e.g. {settingsDraft.platform}3). cranectl runs one Switch{settingsDraft.platform} shortcut with the container as input.</p>
                 <button onClick={saveSettings}>Save Settings</button>
               </div>
             )}
-            {activeModal === 'accounts' && (
-              <TableModal title="📄 Accounts Sheet" rows={modalRows} columns={[['username', 'Username'], ['location', 'Location'], ['container', 'Container ID']]} />
-            )}
-            {activeModal === 'posts' && (
-              <TableModal title="📝 Posts Sheet" rows={modalRows} columns={DAY_COLUMNS.map((day) => [day, day])} />
-            )}
+          </div>
+        </div>
+      )}
+
+      {containerConfirm && (
+        <div className="modal-backdrop" onClick={() => setContainerConfirm(null)}>
+          <div className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <button className="close-button" onClick={() => setContainerConfirm(null)}>❌</button>
+            <div className="stack modal-body">
+              <h2>Confirm: {CONTAINER_ACTION_LABELS[containerConfirm.action]}</h2>
+              <p className="subtle">{currentPlatform} · {containerConfirm.names.length} container(s)</p>
+              {containerConfirm.action !== 'create' && (
+                <div className="status error">⚠️ This deletes the listed containers and their data{containerConfirm.action === 'reset' ? ', then recreates them empty' : ''}.</div>
+              )}
+              <div className="confirm-list">{containerConfirm.names.join('\n')}</div>
+              <div className="quick-grid two">
+                <button onClick={runContainerAction}>Confirm</button>
+                <button onClick={() => setContainerConfirm(null)}>Cancel</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       <div className={`toast ${toast ? 'show' : ''}`}>{toast}</div>
     </main>
-  );
-}
-
-function TableModal({ title, rows, columns }) {
-  return (
-    <div className="table-wrap modal-body">
-      <h2>{title}</h2>
-      <table>
-        <thead>
-          <tr>{columns.map(([, label]) => <th key={label}>{label}</th>)}</tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={index}>
-              {columns.map(([key]) => <td key={key}>{row[key] || ''}</td>)}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
   );
 }
 

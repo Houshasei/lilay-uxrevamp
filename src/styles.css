@@ -90,6 +90,41 @@ select:focus {
   box-shadow: 0 0 0 4px rgba(255, 157, 75, 0.13);
 }
 
+textarea {
+  width: 100%;
+  min-height: 104px;
+  border: 1px solid rgba(255, 190, 128, 0.2);
+  border-radius: 12px;
+  background: rgba(24, 11, 18, 0.82);
+  color: #fff7ec;
+  outline: none;
+  padding: 0.6rem 0.75rem;
+  line-height: 1.45;
+  resize: vertical;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+textarea:focus {
+  border-color: rgba(255, 184, 108, 0.72);
+  box-shadow: 0 0 0 4px rgba(255, 157, 75, 0.13);
+}
+
+.confirm-list {
+  max-height: 40vh;
+  overflow-y: auto;
+  margin: 0;
+  border: 1px solid rgba(255, 196, 132, 0.16);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(24, 11, 18, 0.6);
+  color: #fff2e6;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .app-shell {
   width: min(100%, 760px);
   margin: 0 auto;
