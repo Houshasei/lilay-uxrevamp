@@ -11,5 +11,5 @@ export const USER_CONFIG = {
 
 export const USERS = Object.keys(USER_CONFIG);
 export const PLATFORMS = ['Instagram', 'Threads'];
-export const SHEETS = ['Accounts', 'Caption', 'Reply'];
+export const SHEETS = ['Accounts', 'Posts', 'Reply'];
 export const FIVESIM_PROXY_URL = import.meta.env.VITE_FIVESIM_PROXY_URL || 'https://crimson-surf-e7af.houshasei.workers.dev';

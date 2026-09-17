@@ -661,7 +661,7 @@ function App() {
       </section>
 
       <section className="quick-grid two">
-        <button onClick={() => pickRandom('Caption')}>🖊 Pick Caption</button>
+        <button onClick={() => pickRandom('Posts')}>🖊 Pick Caption</button>
         <button onClick={() => pickRandom('Reply')}>🔗 Pick Link</button>
       </section>
 
