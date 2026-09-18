@@ -2,6 +2,7 @@ export const USER_CONFIG = {
   Ces: { id: 'AKfycbwsIWT7n8-UgEHNx6qyiMdc1UIsO14udUlQdiJq4-HAMQoJQNPMSDhVILwiFYNwti9kMw' },
   KB: { id: 'AKfycbwRTV3xrDr5oLW16TDoXwoqBZA-wVZsQ7aRoscXc5POxLHFGrulD-Z3x0an8rMPfuht' },
   JayAr: { id: 'AKfycbwDsMYk8VTcOR3_DzBCLyMb1DmxpRodqpEvk568aFM4KfBinug1fi7d5FHq4ry_XPxk' },
+  JayAr2: { id: 'AKfycbwoTp1IIX7KlTXP_gw1mse6oHCDKZz14CUVWC-bReiYmm1ns6fUlAH3ukFE_G0jlqG1' },
   LJ: { id: 'AKfycbwL5hpGZ2vq7nos3V7vouEEgnaeKgoVPN9w7MEavlM6YGgSIYhwg6VpFGpv5mkitt_R' },
   EJ: { id: 'AKfycbw66O-DXukXjUij-6cuG1af8Cu_p3yzIkXFOGCm_mjARDoEXfqLlFg_E-uw09iP90sk' },
   Yali: { id: 'AKfycbzlC1a9Cs32q1oMrpNpoxGyMe-_-4I5kXhsfE96dPfLjPAUggPrhDqOl9Esv8TV3PA9'},
