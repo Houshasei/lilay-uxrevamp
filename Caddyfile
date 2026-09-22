@@ -1,0 +1,6 @@
+# Caddy reverse proxy with automatic HTTPS (Let's Encrypt) for the Lilay app.
+# Point the smm.staccc.app DNS A record at this VPS, then: sudo caddy run (or systemd).
+smm.staccc.app {
+	encode gzip
+	reverse_proxy localhost:8080
+}

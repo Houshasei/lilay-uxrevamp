@@ -1,1 +1,15 @@
-{"scripts":{"dev":"vite --host 0.0.0.0","build":"vite build","preview":"vite preview --host 0.0.0.0"},"dependencies":{"@vitejs/plugin-react":"latest","vite":"latest","react":"latest","react-dom":"latest"},"devDependencies":{}}
+{
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "express": "^5.2.1",
+    "react": "latest",
+    "react-dom": "latest",
+    "vite": "latest"
+  }
+}

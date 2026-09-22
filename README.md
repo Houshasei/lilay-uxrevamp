@@ -5,7 +5,7 @@ A React + Vite revamp of the Lilay profile manager, optimized for iPhone Safari 
 ## Features
 
 - Mobile-first dark neon blue UI
-- Google Apps Script sheet loading for Accounts, Caption, and Reply
+- Google Apps Script sheet loading for Accounts, Posts, and Reply
 - Profile navigation with remembered last profile
 - Copy helpers with Safari-friendly clipboard fallback
 - Instagram/Threads opening and iOS Shortcuts links
@@ -15,6 +15,7 @@ A React + Vite revamp of the Lilay profile manager, optimized for iPhone Safari 
 - SMSPool ordering, balance, stock, cancel, resend, and polling
 - 5SIM support through a Cloudflare Worker proxy
 - Grizzly SMS support (handler_api.php protocol, USA Instagram numbers)
+- TextVerified support (v2 API, USA Instagram verifications) through a same-origin proxy — requires the Node server; see [DEPLOY.md](DEPLOY.md) for VPS hosting
 - Copying account fields (Username, IG Password, Name, Email, Password, Secret) jumps to the Instagram/Threads app
 - Browser-remembered settings and user-entered API keys via `localStorage`
 

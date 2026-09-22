@@ -4,6 +4,7 @@ import { buyInstagramNumber, cancelOrder as cancelFiveSimOrder, checkOrder, fini
 import { fetchSheet, getSheetUrl, preloadSheets, updateSecretInSheet } from './api/sheets.js';
 import { cancelSMS, checkResend, checkSMS, getBalance as getSmspoolBalance, getHistory, getStock, orderSMS, resendSMS as resendSmspoolSMS } from './api/smspool.js';
 import { cancelSMS as cancelGrizzlySMS, checkSMS as checkGrizzlySMS, getBalance as getGrizzlyBalance, getStock as getGrizzlyStock, orderSMS as orderGrizzlySMS } from './api/grizzly.js';
+import { cancelSMS as cancelTvSMS, checkSMS as checkTvSMS, getBalance as getTvBalance, orderSMS as orderTvSMS } from './api/textverified.js';
 import { copyToClipboard, readFromClipboard } from './utils/clipboard.js';
 import { getStoredValue, setStoredValue } from './utils/storage.js';
 import { generateTOTP, getTotpSecondsRemaining, isValidBase32, normalizeSecret } from './utils/totp.js';
@@ -70,6 +71,7 @@ function App() {
   const [smsProvider, setSmsProvider] = useState(() => getStoredValue('smsProvider', 'smspool'));
   const [apiKey, setApiKey] = useState(() => getStoredValue(`${getStoredValue('smsProvider', 'smspool')}_api_key`, ''));
   const [apiLocked, setApiLocked] = useState(() => getStoredValue('apiKeyLocked', 'false') === 'true');
+  const [tvUsername, setTvUsername] = useState(() => getStoredValue('textverified_username', ''));
   const [balanceText, setBalanceText] = useState('Balance: Loading...');
   const [stockText, setStockText] = useState('Instagram (USA) numbers: Loading...');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -267,6 +269,17 @@ function App() {
         setBalanceText(balance.success && !Number.isNaN(balanceValue) ? `Balance: $${balanceValue.toFixed(2)}` : 'Balance: Error');
         const stock = await getGrizzlyStock(key);
         setStockText(stock?.success && stock.amount !== undefined ? `Instagram/Threads SMS available numbers: ${stock.amount}` : 'Instagram/Threads SMS available numbers: Error');
+      } else if (smsProvider === 'textverified') {
+        const uname = tvUsername.trim();
+        if (!uname) {
+          setBalanceText('Balance: Enter username');
+          setStockText('Enter TextVerified username (email)');
+          return;
+        }
+        const balance = await getTvBalance(key, uname);
+        const balanceValue = Number.parseFloat(balance.balance);
+        setBalanceText(balance.success && !Number.isNaN(balanceValue) ? `Balance: $${balanceValue.toFixed(2)}` : 'Balance: Error');
+        setStockText('TextVerified · Instagram (SMS)');
       } else {
         const profile = await getProfile(FIVESIM_PROXY_URL, key);
         setBalanceText(`Balance: $${Number.parseFloat(profile.balance || 0).toFixed(2)}`);
@@ -278,7 +291,7 @@ function App() {
       setBalanceText('Balance: Error');
       setStockText('Available numbers: Error');
     }
-  }, [apiKey, smsProvider]);
+  }, [apiKey, smsProvider, tvUsername]);
 
   const getNumber = async () => {
     const key = apiKey.trim();
@@ -346,6 +359,35 @@ function App() {
           } catch {
           }
         }, 5000);
+      } else if (smsProvider === 'textverified') {
+        const uname = tvUsername.trim();
+        if (!uname) throw new Error('Enter your TextVerified username (email)');
+        const order = await orderTvSMS(key, uname);
+        if (!order.success) throw new Error(order.message || 'Failed to create verification');
+        setCurrentOrderId(order.order_id);
+        setPhoneNumber(order.phonenumber);
+        updateStatus('Number ready. Waiting for SMS...', 'loading');
+
+        let attempts = 0;
+        pollingRef.current = setInterval(async () => {
+          attempts += 1;
+          updateStatus(`Waiting for SMS... (attempt ${attempts})`, 'loading');
+          try {
+            const smsCheck = await checkTvSMS(key, uname, order.order_id);
+            if (smsCheck?.status === 'CANCEL' || smsCheck?.status === 'TIMEOUT') {
+              clearPolling();
+              updateStatus(`Order ended - ${smsCheck.status}`, 'error');
+              setOrdering(false);
+            } else if (smsCheck?.status === 'OK' && smsCheck.sms) {
+              clearPolling();
+              setSmsCode(getSmsTextValue(smsCheck.sms));
+              setCurrentOrderId(null);
+              updateStatus('SMS received!', 'success');
+              setOrdering(false);
+            }
+          } catch {
+          }
+        }, 5000);
       } else {
         const order = await buyInstagramNumber(FIVESIM_PROXY_URL, key);
         if (!order?.id) throw new Error(`Failed to buy number: ${order?.message || order?.error || 'Unknown error'}`);
@@ -393,6 +435,9 @@ function App() {
         await cancelFiveSimOrder(FIVESIM_PROXY_URL, key, currentOrderId);
       } else if (smsProvider === 'grizzly') {
         const result = await cancelGrizzlySMS(key, currentOrderId);
+        if (!result.success) throw new Error(result.message || 'Failed to cancel');
+      } else if (smsProvider === 'textverified') {
+        const result = await cancelTvSMS(key, tvUsername.trim(), currentOrderId);
         if (!result.success) throw new Error(result.message || 'Failed to cancel');
       } else {
         const result = await cancelSMS(key, currentOrderId);
@@ -493,6 +538,11 @@ function App() {
         await cancelGrizzlySMS(apiKey.trim(), currentOrderId);
       } catch {
       }
+    } else if (smsProvider === 'textverified' && currentOrderId && apiKey.trim() && tvUsername.trim()) {
+      try {
+        await cancelTvSMS(apiKey.trim(), tvUsername.trim(), currentOrderId);
+      } catch {
+      }
     }
     clearPolling();
     setCurrentOrderId(null);
@@ -584,6 +634,10 @@ function App() {
   useEffect(() => {
     setStoredValue(`${smsProvider}_api_key`, apiKey.trim());
   }, [apiKey, smsProvider]);
+
+  useEffect(() => {
+    setStoredValue('textverified_username', tvUsername.trim());
+  }, [tvUsername]);
 
   useEffect(() => {
     refreshBalance();
@@ -701,10 +755,18 @@ function App() {
               <option value="smspool">SMSPool.net</option>
               <option value="5sim">5SIM.net</option>
               <option value="grizzly">Grizzly SMS</option>
+              <option value="textverified">TextVerified</option>
             </select>
 
+            {smsProvider === 'textverified' && !apiLocked && (
+              <>
+                <label className="field-label" htmlFor="tvUsername">TextVerified Username (email)</label>
+                <input id="tvUsername" value={tvUsername} onChange={(event) => setTvUsername(event.target.value)} placeholder="you@example.com" />
+              </>
+            )}
+
             <label className="field-label" htmlFor="apiKey">
-              {smsProvider === 'smspool' ? 'SMSPool API Key' : smsProvider === '5sim' ? '5SIM Bearer Token' : 'Grizzly SMS API Key'}
+              {smsProvider === 'smspool' ? 'SMSPool API Key' : smsProvider === '5sim' ? '5SIM Bearer Token' : smsProvider === 'grizzly' ? 'Grizzly SMS API Key' : 'TextVerified API Key'}
               <button className={`lock-button ${apiLocked ? 'unlocked' : ''}`} onClick={() => {
                 setApiLocked((previous) => {
                   setStoredValue('apiKeyLocked', !previous);
