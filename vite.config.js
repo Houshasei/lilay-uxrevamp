@@ -12,6 +12,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (requestPath) => requestPath.replace(/^\/api\/textverified/, '/api/pub/v2'),
       },
+      '/api/smspool': {
+        target: 'https://api.smspool.net',
+        changeOrigin: true,
+        rewrite: (requestPath) => requestPath.replace(/^\/api\/smspool/, ''),
+      },
     },
   },
 });

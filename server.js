@@ -8,6 +8,8 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const DIST = path.join(__dirname, 'dist');
 const TV_BASE = 'https://www.textverified.com/api/pub/v2';
+const SMSPOOL_BASE = 'https://api.smspool.net';
+const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36';
 
 app.use(express.json());
 
@@ -33,6 +35,26 @@ app.use('/api/textverified', async (req, res) => {
     res.status(upstream.status).send(Buffer.from(await upstream.arrayBuffer()));
   } catch (error) {
     res.status(502).json({ error: `TextVerified proxy error: ${error.message}` });
+  }
+});
+
+// SMSPool proxy. SMSPool added a bot challenge that blocks browser (CORS) calls and
+// flagged clients, so we call it server-side with browser-like headers. Every SMSPool
+// endpoint accepts GET, so this is a simple query-string passthrough (req.url keeps the query).
+app.use('/api/smspool', async (req, res) => {
+  const url = `${SMSPOOL_BASE}${req.url}`;
+  const headers = {
+    'User-Agent': req.headers['user-agent'] || BROWSER_UA,
+    Accept: 'application/json, text/plain, */*',
+    'Accept-Language': req.headers['accept-language'] || 'en-US,en;q=0.9',
+    Referer: 'https://www.smspool.net/',
+  };
+  try {
+    const upstream = await fetch(url, { method: 'GET', headers });
+    res.set('content-type', upstream.headers.get('content-type') || 'application/json');
+    res.status(upstream.status).send(Buffer.from(await upstream.arrayBuffer()));
+  } catch (error) {
+    res.status(502).json({ error: `SMSPool proxy error: ${error.message}` });
   }
 });
 
